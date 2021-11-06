@@ -20,6 +20,15 @@ export function declareType(type: IType) {
     return Reflect.metadata(typeMetadataKey, type);
 }
 
+export function declareTypePrim(typePrim: Ydb.Type.PrimitiveTypeId) {
+    const type: Ydb.IType = { typeId: typePrim };
+    return declareType(type);
+}
+export function declareTypeNull(typePrim: Ydb.Type.PrimitiveTypeId) {
+    const type: Ydb.IType = { optionalType: { item: { typeId: typePrim } } };
+    return declareType(type);
+}
+
 const primitiveTypeToValue: Record<number, string> = {
     [Type.PrimitiveTypeId.BOOL]: 'boolValue',
     [Type.PrimitiveTypeId.INT8]: 'int32Value',
@@ -367,6 +376,7 @@ export const identityConversion: NamesConversion = {
 export class TypedData {
     [property: string]: any;
     static __options: TypedDataOptions = {};
+    public static  YQLUpsert:string='';
 
     constructor(data: Record<string, any>) {
         _.assign(this, data);
@@ -410,6 +420,7 @@ export class TypedData {
             }
         };
     }
+
 
     getRowValue() {
         return {

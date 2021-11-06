@@ -16,7 +16,7 @@
     "url-shortener-example": "cd examples && npm run url-shortener",
     "start": "npm run basic-example-v1",
     "clean": "rm -rf build",
-    "prepublish": "npm run clean && npm run build:lib"
+    "prepublish2": "npm run clean && npm run build:lib"
   },
   "keywords": [
     "ydb",
