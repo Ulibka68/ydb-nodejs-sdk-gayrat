@@ -3,6 +3,8 @@ export {default as getLogger, Logger} from './logging';
 export {default as Driver} from './driver';
 export {
     declareType,
+    declareTypePrim,
+    declareTypeNull,
     Primitive,
     TypedData,
     TypedDataOptions,
@@ -10,6 +12,9 @@ export {
     NamesConversion,
     snakeToCamelCaseConversion,
     identityConversion,
+    primitiveTypeToValue,
+    primitiveTypeIdToName,
+    ITableFromClass,
     typeMetadataKey
 } from './types';
 export {

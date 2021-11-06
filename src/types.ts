@@ -20,16 +20,16 @@ export function declareType(type: IType) {
     return Reflect.metadata(typeMetadataKey, type);
 }
 
-export function declareTypePrim(typePrim: Ydb.Type.PrimitiveTypeId) {
+export function declareTypePrim(typePrim: PrimitiveTypeId) {
     const type: Ydb.IType = { typeId: typePrim };
     return declareType(type);
 }
-export function declareTypeNull(typePrim: Ydb.Type.PrimitiveTypeId) {
+export function declareTypeNull(typePrim: PrimitiveTypeId) {
     const type: Ydb.IType = { optionalType: { item: { typeId: typePrim } } };
     return declareType(type);
 }
 
-const primitiveTypeToValue: Record<number, string> = {
+export const primitiveTypeToValue: Record<number, string> = {
     [Type.PrimitiveTypeId.BOOL]: 'boolValue',
     [Type.PrimitiveTypeId.INT8]: 'int32Value',
     [Type.PrimitiveTypeId.UINT8]: 'uint32Value',
@@ -373,6 +373,13 @@ export const identityConversion: NamesConversion = {
     ydbToJs: _.identity,
 }
 
+
+export type NonFunctionKeys<T extends object> = {
+    [K in keyof T]-?: T[K] extends Function ? never : K;
+}[keyof T];
+
+export type ITableFromClass<T extends object> = { [K in NonFunctionKeys<T>]: T[K] };
+
 export class TypedData {
     [property: string]: any;
     static __options: TypedDataOptions = {};
@@ -460,4 +467,58 @@ export class TypedData {
             }
         }
     }
+
+
+    generateYQLUpsert(tableName: string, databaseName: string) {
+        let rst = `PRAGMA TablePathPrefix("${databaseName}");`;
+
+        const typeKeys = primitiveTypeIdToName;
+
+
+        const tpo = this.getRowType().structType.members.map((itm) => {
+            const res = { name: itm.name, typeId: 0, optional: false, typeName: '' };
+            if (itm.type.typeId) {
+                res.typeId = itm.type.typeId;
+            } else {
+                res.typeId = itm.type!.optionalType!.item!.typeId as number;
+                res.optional = true;
+            }
+
+            // @ts-ignore
+            res.typeName = typeKeys[res.typeId];
+            return res;
+        });
+
+        tpo.forEach((itm) => {
+            rst += `\nDECLARE $${itm.name} as ${itm.typeName}${
+                itm.optional ? '?' : ''
+            };`;
+        });
+        rst += `\n\nUPSERT INTO ${tableName} (`;
+        tpo.forEach((itm) => {
+            rst += `\n   ${itm.name},`;
+        });
+        rst = rst.substring(0, rst.length - 1);
+        rst += '\n)VALUES (';
+        tpo.forEach((itm) => {
+            rst += `\n   $${itm.name},`;
+        });
+        rst = rst.substring(0, rst.length - 1);
+        rst += '\n);';
+
+        return rst;
+    } // generateYQLUpsert
 }
+
+export const primitiveTypeIdToName : Record<string, string> = {};
+
+
+function initPrimitiveTypeIdToName() {
+    for (const itm of Object.entries(PrimitiveTypeId) ) {
+        // @ts-ignore
+        primitiveTypeIdToName[itm[1]] = itm[0];
+    }
+}
+
+// Side Effect
+initPrimitiveTypeIdToName();
