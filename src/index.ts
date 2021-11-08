@@ -15,6 +15,7 @@ export {
     primitiveTypeToValue,
     primitiveTypeIdToName,
     ITableFromClass,
+    TypedDataFieldDescription,
     typeMetadataKey
 } from './types';
 export {

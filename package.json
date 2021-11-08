@@ -1,5 +1,5 @@
 {
-  "name": "ydb-sdk",
+  "name": "@ggvlasov/ydb-sdk",
   "version": "2.5.1",
   "description": "Node.js bindings for working with YDB API over gRPC",
   "main": "build/index.js",
@@ -38,7 +38,6 @@
     "long": "^4.0.0",
     "luxon": "^1.21.2",
     "pino": "^6.3.0",
-    "protobufjs": "^6.8.8",
     "reflect-metadata": "^0.1.13",
     "yandex-cloud": "^1.4.2"
   },

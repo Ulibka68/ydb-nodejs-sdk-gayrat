@@ -380,10 +380,18 @@ export type NonFunctionKeys<T extends object> = {
 
 export type ITableFromClass<T extends object> = { [K in NonFunctionKeys<T>]: T[K] };
 
+export interface TypedDataFieldDescription {
+ name: string;
+ typeId: number;
+ optional: boolean;
+ typeName: string;
+}
+
 export class TypedData {
     [property: string]: any;
     static __options: TypedDataOptions = {};
     public static  YQLUpsert:string='';
+    public static fieldsDescriptions : Array<TypedDataFieldDescription>=[];
 
     constructor(data: Record<string, any>) {
         _.assign(this, data);
@@ -468,6 +476,13 @@ export class TypedData {
         }
     }
 
+    createQueryParams() {
+        const resObj:Record<string,any>={};
+        TypedData.fieldsDescriptions.forEach((fld)=>{
+            resObj['$'+fld.name]=this.getTypedValue(fld.name)
+        })
+        return resObj;
+    }
 
     generateYQLUpsert(tableName: string, databaseName: string) {
         let rst = `PRAGMA TablePathPrefix("${databaseName}");`;
@@ -488,6 +503,7 @@ export class TypedData {
             res.typeName = typeKeys[res.typeId];
             return res;
         });
+        TypedData.fieldsDescriptions=tpo;
 
         tpo.forEach((itm) => {
             rst += `\nDECLARE $${itm.name} as ${itm.typeName}${
@@ -506,6 +522,7 @@ export class TypedData {
         rst = rst.substring(0, rst.length - 1);
         rst += '\n);';
 
+        TypedData.YQLUpsert=rst;
         return rst;
     } // generateYQLUpsert
 }
