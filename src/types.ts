@@ -12,6 +12,9 @@ import ITypedValue = Ydb.ITypedValue;
 import IResultSet = Ydb.IResultSet;
 import NullValue = google.protobuf.NullValue;
 import PrimitiveTypeId = Ydb.Type.PrimitiveTypeId;
+import { Session} from "./table";
+import { Logger} from './logging';
+import { withRetries } from './retries';
 
 
 export const typeMetadataKey = Symbol('type');
@@ -380,6 +383,78 @@ export type NonFunctionKeys<T extends object> = {
 
 export type ITableFromClass<T extends object> = { [K in NonFunctionKeys<T>]: T[K] };
 
+
+export type NonNeverKeys<T extends object> = {
+    [K in keyof T]-?: T[K] extends never ? never : K;
+}[keyof T];
+
+// тест
+// type T1 = {
+//   a: number;
+//   b: never;
+//   c: string;
+// };
+// type O2 = NonNeverKeys<T1>;
+// выход
+// type O2_r = 'a' | 'c';
+
+export type NonUndefinedKeys<T extends object> = {
+    [K in keyof T]-?: T[K] extends undefined ? never : K;
+}[keyof T];
+
+export type RemoveNever<T extends object> = { [K in NonNeverKeys<T>]: T[K] };
+
+// тест
+// type O3 = RemoveNever<T1>;
+// выход
+// type O3_r = {
+//   a: number;
+//   c: string;
+// };
+
+export type OptionalUndefined<T extends object> = {
+    [K in NonUndefinedKeys<T>]+?: T[K];
+};
+
+export type RemoveIntersection<T> = { [K in keyof T]: T[K] };
+
+type RequiredFields<B extends Record<string, FieldsDefinition>> = RemoveNever<{
+    [K in keyof B]: B[K]['opt'] extends string ? B[K]['val'] : never;
+}>;
+
+type OptionalFields<B extends Record<string, FieldsDefinition>> =
+    OptionalUndefined<{
+        [K in keyof B]: B[K]['opt'] extends number ? B[K]['val'] : never;
+    }>;
+
+/*
+  На вход получает тип , образуемый из объекта JS
+
+  const tdef = {
+    id: { val: 0, pt: Pt.UINT64, opt: 'r' },
+    title: { val: 'title', pt: Pt.UTF8, opt: 0 },
+    genre_ids: { val: 'json', pt: Pt.JSON, opt: 0 },
+    release_date: { val: new Date(), pt: Pt.DATE, opt: 0 },
+  };
+
+  type ITdef = ConvertStructToTypes<typeof tdef>;
+
+  На выходе получаем :
+  {
+    id : number;
+    title? : string; // опциональный параметр
+    genre_ids? : string;
+    release_date? : Date;
+  }
+
+  Новые записи можно создавать передавая только обязательные параметры
+  const rec = new Tdef({ id: 25 });
+
+ */
+export type ConvertStructToTypes<T extends Record<string, FieldsDefinition>> =
+    RemoveIntersection<RequiredFields<T> & OptionalFields<T>>;
+
+
 export interface TypedDataFieldDescription {
  name: string;
  typeId: number;
@@ -387,14 +462,40 @@ export interface TypedDataFieldDescription {
  typeName: string;
 }
 
+export interface FieldsDefinition {
+    val: any;
+    pt: Ydb.Type.PrimitiveTypeId;
+    opt: string | number;
+    pk?: boolean; // primary key
+}
+
+export type TableDefinition = Record<string, FieldsDefinition>;
+
+export class YdbTableMetaData {
+        public tableName: string='';
+        public fieldsDescriptions: Array<TypedDataFieldDescription>=[];
+        public   YQLUpsert:string='';
+        public   YQLCreateTable:string='';
+        public tableDef: TableDefinition={};
+}
+
 export class TypedData {
     [property: string]: any;
     static __options: TypedDataOptions = {};
-    public static  YQLUpsert:string='';
-    public static fieldsDescriptions : Array<TypedDataFieldDescription>=[];
+
+    public static refMetaData : YdbTableMetaData;
+
+    // public static  YQLUpsert:string='';
+    // public static fieldsDescriptions : Array<TypedDataFieldDescription>=[];
 
     constructor(data: Record<string, any>) {
-        _.assign(this, data);
+        // _.assign(this, data);
+        // если в наследующем классе написано public a : string = undefined - то lodash присваивание не производит
+        Reflect.ownKeys(data).forEach((key) => {
+            this[key as string] = data[key as string];
+        });
+
+        this.generateMetadata();
     }
 
     getType(propertyKey: string): IType {
@@ -478,17 +579,28 @@ export class TypedData {
 
     createQueryParams() {
         const resObj:Record<string,any>={};
-        TypedData.fieldsDescriptions.forEach((fld)=>{
+        // @ts-ignore   доступ к static свойству derived класса
+        const refMeta : YdbTableMetaData = this.constructor.refMetaData;
+
+        /*
+        // выдаст все параметры
+        refMeta.fieldsDescriptions.forEach((fld)=>{
             resObj['$'+fld.name]=this.getTypedValue(fld.name)
+        })*/
+
+        Reflect.ownKeys(this).forEach(key   => {
+            key=key.toString();
+            resObj['$'+key]=this.getTypedValue(key)
         })
+
+
         return resObj;
     }
 
-    generateYQLUpsert(tableName: string, databaseName: string) {
+    generateYQLUpsert( databaseName: string) {
         let rst = `PRAGMA TablePathPrefix("${databaseName}");`;
 
-        const typeKeys = primitiveTypeIdToName;
-
+        const refMeta : YdbTableMetaData=(this.constructor as typeof TypedData).refMetaData;
 
         const tpo = this.getRowType().structType.members.map((itm) => {
             const res = { name: itm.name, typeId: 0, optional: false, typeName: '' };
@@ -499,18 +611,17 @@ export class TypedData {
                 res.optional = true;
             }
 
-            // @ts-ignore
-            res.typeName = typeKeys[res.typeId];
+            res.typeName = primitiveTypeIdToName[res.typeId];
             return res;
         });
-        TypedData.fieldsDescriptions=tpo;
+        refMeta.fieldsDescriptions=tpo;
 
         tpo.forEach((itm) => {
             rst += `\nDECLARE $${itm.name} as ${itm.typeName}${
                 itm.optional ? '?' : ''
             };`;
         });
-        rst += `\n\nUPSERT INTO ${tableName} (`;
+        rst += `\n\nUPSERT INTO ${refMeta.tableName} (`;
         tpo.forEach((itm) => {
             rst += `\n   ${itm.name},`;
         });
@@ -522,9 +633,98 @@ export class TypedData {
         rst = rst.substring(0, rst.length - 1);
         rst += '\n);';
 
-        TypedData.YQLUpsert=rst;
-        return rst;
+        refMeta.YQLUpsert=rst;
     } // generateYQLUpsert
+
+    static generateInitialData(tableDef: TableDefinition) {
+        const resultObj: any = {};
+        Reflect.ownKeys(tableDef).forEach((key) => {
+            key = key as string;
+            resultObj[key] = tableDef[key].val;
+        });
+        return resultObj;
+    } // generateInitialData
+
+    generateMetadata() {
+        // @ts-ignore
+        if (!this.constructor.refMetaData) return;
+        // @ts-ignore
+        const tableDef: TableDefinition=this.constructor.refMetaData.tableDef;
+        Reflect.ownKeys(tableDef).forEach((key) => {
+            let metadataValue: any = {};
+            key = key as string;
+
+            if (tableDef[key].opt === 'r') {
+                metadataValue = { typeId: tableDef[key].pt };
+            } else
+                metadataValue = {
+                    optionalType: { item: { typeId: tableDef[key].pt } },
+                };
+
+            Reflect.defineMetadata(typeMetadataKey, metadataValue, this, key);
+        });
+    } // generateMetadata
+
+    static generateYQLcreateTable(
+        databaseName: string
+    ) {
+        let rst = `PRAGMA TablePathPrefix("${databaseName}");\n`;
+        let rst_primary = `\n    PRIMARY KEY (`;
+        let first_primary = true;
+
+        rst += `CREATE TABLE ${this.refMetaData.tableName} (`;
+        Reflect.ownKeys(this.refMetaData.tableDef).forEach((key) => {
+            key = key as string;
+            rst += `\n    ${key} ${primitiveTypeIdToName[this.refMetaData.tableDef[key].pt]},`;
+            if (this.refMetaData.tableDef[key].pk) {
+                if (!first_primary) {
+                    rst_primary += ',';
+                }
+                first_primary = false;
+                rst_primary += key;
+            }
+        });
+        rst_primary += ')';
+        rst += rst_primary + '\n)';
+        // return rst;
+        this.refMetaData.YQLCreateTable = rst;
+    } // generateYQLcreateTable
+
+    static initTableDef(ctor : {new (data: any):any},tableName: string,databaseName : string, tdef : TableDefinition) {
+        this.refMetaData = new YdbTableMetaData();
+        this.refMetaData.tableName = tableName;
+        this.refMetaData.tableDef = tdef;
+
+        const rec = new ctor(TypedData.generateInitialData(tdef ));
+        rec.generateYQLUpsert(databaseName);
+        this.generateYQLcreateTable(databaseName);
+    }
+
+    async upsertToDB(session: Session, logger: Logger ) {
+
+        const YQLUpsert =  (this.constructor as typeof TypedData).refMetaData.YQLUpsert;
+        const thisRecord =this;
+
+        async function fillTable() {
+            logger.info('Inserting data to tables, preparing query...');
+            // @ts-ignore
+            let preparedQuery: Ydb.Table.PrepareQueryResult;
+            try {
+                preparedQuery = await session.prepareQuery( YQLUpsert );
+                logger.info('Query has been prepared, executing...');
+                await session.executeQuery(preparedQuery, thisRecord.createQueryParams());
+            } catch (err) {
+                if (err instanceof Error) {
+                    console.error(err.message);
+                    process.exit(55);
+                }
+            }
+
+        }
+
+        await withRetries(fillTable);
+    }
+
 }
 
 export const primitiveTypeIdToName : Record<string, string> = {};

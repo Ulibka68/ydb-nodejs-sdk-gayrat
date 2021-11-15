@@ -16,6 +16,10 @@ export {
     primitiveTypeIdToName,
     ITableFromClass,
     TypedDataFieldDescription,
+    YdbTableMetaData,
+    FieldsDefinition,
+    TableDefinition,
+    ConvertStructToTypes,
     typeMetadataKey
 } from './types';
 export {
