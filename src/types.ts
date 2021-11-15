@@ -12,7 +12,7 @@ import ITypedValue = Ydb.ITypedValue;
 import IResultSet = Ydb.IResultSet;
 import NullValue = google.protobuf.NullValue;
 import PrimitiveTypeId = Ydb.Type.PrimitiveTypeId;
-import { Session} from "./table";
+import { Session, TableDescription, Column } from "./table";
 import { Logger} from './logging';
 import { withRetries } from './retries';
 
@@ -460,6 +460,7 @@ export interface TypedDataFieldDescription {
  typeId: number;
  optional: boolean;
  typeName: string;
+ primaryKey?: boolean;
 }
 
 export interface FieldsDefinition {
@@ -484,9 +485,6 @@ export class TypedData {
     static __options: TypedDataOptions = {};
 
     public static refMetaData : YdbTableMetaData;
-
-    // public static  YQLUpsert:string='';
-    // public static fieldsDescriptions : Array<TypedDataFieldDescription>=[];
 
     constructor(data: Record<string, any>) {
         // _.assign(this, data);
@@ -690,6 +688,16 @@ export class TypedData {
         this.refMetaData.YQLCreateTable = rst;
     } // generateYQLcreateTable
 
+    static setPrimaryKeyField() {
+        Reflect.ownKeys(this.refMetaData.tableDef).forEach((key) => {
+            key = key as string;
+            if (this.refMetaData.tableDef[key].pk) {
+                const idx= this.refMetaData.fieldsDescriptions.findIndex( (element)=> (element.name === key));
+                if (idx >=0) this.refMetaData.fieldsDescriptions[idx].primaryKey=true;
+            }
+        });
+    }
+
     static initTableDef(ctor : {new (data: any):any},tableName: string,databaseName : string, tdef : TableDefinition) {
         this.refMetaData = new YdbTableMetaData();
         this.refMetaData.tableName = tableName;
@@ -698,6 +706,7 @@ export class TypedData {
         const rec = new ctor(TypedData.generateInitialData(tdef ));
         rec.generateYQLUpsert(databaseName);
         this.generateYQLcreateTable(databaseName);
+        this.setPrimaryKeyField();
     }
 
     async upsertToDB(session: Session, logger: Logger ) {
@@ -723,6 +732,59 @@ export class TypedData {
         }
 
         await withRetries(fillTable);
+    }
+
+    /*
+    Так не работает
+    static async createDBTable(session: Session, logger: Logger ) {
+
+        const YQLCreateTable =  this.refMetaData.YQLCreateTable;
+
+        async function createTable() {
+            logger.info('Creating table...');
+                await session.executeQuery(YQLCreateTable);
+        }
+
+        await withRetries(createTable);
+    }*/
+
+    static async createDBTable(session: Session, logger: Logger )  {
+        logger.info('Creating table... ' + this.refMetaData.tableName);
+        const columns : Array<Column>=[];
+        const primaryKeys : Array<string>=[];
+        this.refMetaData.fieldsDescriptions.forEach(fld=>{
+            const type ={optionalType: {item: {typeId: fld.typeId}}};
+            /*
+
+            // Error : Only optional type for columns supported
+            if (fld.optional) {
+                type={optionalType: {item: {typeId: fld.typeId}}};
+            } else {
+                type= {typeId: fld.typeId};
+            }
+             */
+
+            const column = new Column(
+                fld.name,
+                Ydb.Type.create(type)
+            );
+            columns.push(column);
+             if (fld.primaryKey) {
+                 primaryKeys.push(fld.name)
+             }
+        })
+
+        await session.createTable(
+            this.refMetaData.tableName,
+            new TableDescription()
+                .withColumns(...columns)
+                .withPrimaryKeys(...primaryKeys)
+        );
+    }
+
+    static async dropDBTable(session: Session, logger: Logger )  {
+        logger.info('Drop table... ' + this.refMetaData.tableName);
+        await session.dropTable(this.refMetaData.tableName);
     }
 
 }
