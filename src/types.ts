@@ -16,7 +16,6 @@ import { Session, TableDescription, Column } from "./table";
 import { Logger} from './logging';
 import { withRetries } from './retries';
 
-
 export const typeMetadataKey = Symbol('type');
 
 export function declareType(type: IType) {
@@ -476,6 +475,7 @@ export class YdbTableMetaData {
         public tableName: string='';
         public fieldsDescriptions: Array<TypedDataFieldDescription>=[];
         public   YQLUpsert:string='';
+        public   YQLUpsertSeries:string='';
         public   YQLCreateTable:string='';
         public tableDef: TableDefinition={};
 }
@@ -492,6 +492,7 @@ export class TypedData {
         Reflect.ownKeys(data).forEach((key) => {
             this[key as string] = data[key as string];
         });
+       this.expandFields();
 
         this.generateMetadata();
     }
@@ -575,6 +576,17 @@ export class TypedData {
         }
     }
 
+    expandFields() {
+        // @ts-ignore   доступ к static свойству derived класса
+        const refMeta : YdbTableMetaData = this.constructor.refMetaData;
+        Reflect.ownKeys(refMeta.tableDef).forEach(key => {
+            key=key as string;
+            if (! this[key]) {
+                this[key]=null;
+            }
+        })
+    }
+
     createQueryParams() {
         const resObj:Record<string,any>={};
         // @ts-ignore   доступ к static свойству derived класса
@@ -597,6 +609,7 @@ export class TypedData {
 
     generateYQLUpsert( databaseName: string) {
         let rst = `PRAGMA TablePathPrefix("${databaseName}");`;
+        let rst_series = `PRAGMA TablePathPrefix("${databaseName}");\nDECLARE $seriesData AS List<Struct<`;
 
         const refMeta : YdbTableMetaData=(this.constructor as typeof TypedData).refMetaData;
 
@@ -618,12 +631,21 @@ export class TypedData {
             rst += `\nDECLARE $${itm.name} as ${itm.typeName}${
                 itm.optional ? '?' : ''
             };`;
+            rst_series += `\n   ${itm.name} : ${itm.typeName}${itm.optional ? '?' : ''},`;
         });
+        rst_series = rst_series.substring(0,rst_series.length-1);
+        rst_series += `>>;\n\nUPSERT INTO ${refMeta.tableName}\nSELECT *`;
+
         rst += `\n\nUPSERT INTO ${refMeta.tableName} (`;
         tpo.forEach((itm) => {
             rst += `\n   ${itm.name},`;
+            // rst_series += `\n   ${itm.name},`;
         });
+
         rst = rst.substring(0, rst.length - 1);
+        // rst_series = rst_series.substring(0,rst_series.length-1);
+        rst_series += '\nFROM AS_TABLE($seriesData);'
+
         rst += '\n)VALUES (';
         tpo.forEach((itm) => {
             rst += `\n   $${itm.name},`;
@@ -632,6 +654,7 @@ export class TypedData {
         rst += '\n);';
 
         refMeta.YQLUpsert=rst;
+        refMeta.YQLUpsertSeries=rst_series;
     } // generateYQLUpsert
 
     static generateInitialData(tableDef: TableDefinition) {
@@ -722,6 +745,33 @@ export class TypedData {
                 preparedQuery = await session.prepareQuery( YQLUpsert );
                 logger.info('Query has been prepared, executing...');
                 await session.executeQuery(preparedQuery, thisRecord.createQueryParams());
+            } catch (err) {
+                if (err instanceof Error) {
+                    console.error(err.message);
+                    process.exit(55);
+                }
+            }
+
+        }
+
+        await withRetries(fillTable);
+    }
+
+    static async upsertSeriesToDB(session: Session, logger: Logger, dataArray : Array<TypedData> ) {
+
+        const YQLUpsert =  this.refMetaData.YQLUpsertSeries;
+       /* const YQLUpsert =`PRAGMA TablePathPrefix("${databaseName}");
+        Declare $seriesData  as List<Struct<id: Uint64, title : Utf8?, adult : BOOL?>>;
+        UPSERT INTO ${this.refMetaData.tableName} SELECT  * FROM AS_TABLE($seriesData);`*/
+
+
+        async function fillTable() {
+            logger.info('Inserting data to tables, preparing query...');
+            try {
+                const preparedQuery = await session.prepareQuery( YQLUpsert );
+                logger.info('Query has been prepared, executing...');
+                await session.executeQuery(preparedQuery,{'$seriesData': TypedData.asTypedCollection(dataArray)})
+                    // thisRecord.createQueryParams());
             } catch (err) {
                 if (err instanceof Error) {
                     console.error(err.message);

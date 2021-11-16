@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import EventEmitter from 'events';
-import {Ydb} from '../proto/bundle';
+import { Ydb} from '../proto/bundle';
 import {
     AuthenticatedService,
     ClientOptions,
@@ -295,9 +295,24 @@ export class Session extends EventEmitter implements ICreateSessionResult {
         if (keepInCache) {
             request.queryCachePolicy = {keepInCache};
         }
-        const response = await this.api.executeDataQuery(request);
+        const response = await this.api.executeDataQuery(request); //  Promise<Ydb.Table.ExecuteDataQueryResponse>;
         const payload = getOperationPayload(response);
         return ExecuteQueryResult.decode(payload);
+    }
+
+    @pessimizable
+    public async executeBulkUpsert(
+        table : string,
+        rows: Ydb.ITypedValue,
+        operationParams?: IOperationParams
+    ) {
+        const request: Ydb.Table.IBulkUpsertRequest = {
+            table, // string
+            rows,
+            operationParams
+        }
+
+        return  await this.api.bulkUpsert(request); // : Promise<Ydb.Table.BulkUpsertResponse>;
     }
 
     @pessimizable
