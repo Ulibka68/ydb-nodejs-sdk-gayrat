@@ -1,6 +1,6 @@
 {
   "name": "@ggvlasov/ydb-sdk",
-  "version": "2.5.1",
+  "version": "1.0.0",
   "description": "Node.js bindings for working with YDB API over gRPC",
   "main": "build/index.js",
   "files": [
@@ -16,7 +16,7 @@
     "url-shortener-example": "cd examples && npm run url-shortener",
     "start": "npm run basic-example-v1",
     "clean": "rm -rf build",
-    "prepublish2": "npm run clean && npm run build:lib"
+    "_prepublish": "npm run clean && npm run build:lib"
   },
   "keywords": [
     "ydb",
@@ -28,6 +28,7 @@
     "url": "https://github.com/yandex-cloud/ydb-nodejs-sdk.git"
   },
   "author": "Timur Sufiev",
+  "contributors": ["Gayrat Vlasov ggvlasov@gmail.com"],
   "license": "Apache",
   "dependencies": {
     "@grpc/proto-loader": "^0.5.1",
