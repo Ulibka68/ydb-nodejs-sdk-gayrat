@@ -492,7 +492,7 @@ export class TypedData {
         Reflect.ownKeys(data).forEach((key) => {
             this[key as string] = data[key as string];
         });
-       this.expandFields();
+       // this.expandFields();
 
         this.generateMetadata();
     }
