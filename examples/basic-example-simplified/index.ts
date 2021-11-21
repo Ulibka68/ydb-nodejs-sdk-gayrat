@@ -1,5 +1,5 @@
-import { config } from 'dotenv';
-config({ path: 'env.local' });
+// import { config } from 'dotenv';
+// config({ path: 'env.local' });
 
 import { ColorConsole } from '../type-utils/color-console';
 

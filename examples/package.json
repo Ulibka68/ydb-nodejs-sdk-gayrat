@@ -5,10 +5,11 @@
   "scripts": {
     "basic-simplified": "ts-node basic-example-simplified/index.ts",
     "basic-v1": "ts-node basic-example-v1/index.ts",
+    "scan-query": "ts-node scan-query/index.ts",
     "lint": "eslint basic-example-simplified/src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
-    "@ggvlasov/ydb-sdk": "^1.0.1",
+    "@ggvlasov/ydb-sdk": "^1.0.2",
     "dotenv": "^10.0.0",
     "reflect-metadata": "^0.1.13"
   },

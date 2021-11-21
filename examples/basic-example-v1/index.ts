@@ -1,5 +1,5 @@
-import { config } from 'dotenv';
-config({ path: 'env.local' });
+// import { config } from 'dotenv';
+// config({ path: 'env.local' });
 
 process.env.YDB_SDK_PRETTY_LOGS = '1';
 
@@ -285,6 +285,8 @@ async function run() {
         await selectSimple(databaseName, session, logger);
         await upsertSimple(databaseName, session, logger);
 
+        // выборка из episodes
+        // данные передаются в двумерном массиве с элементами [seriesId, seasonId, episodeId]
         await selectPrepared(
             databaseName,
             session,
@@ -295,7 +297,7 @@ async function run() {
             logger
         );
 
-        await explicitTcl(databaseName, session, [2, 6, 1], logger);
+        await explicitTcl(databaseName, session, [2, 6, 1], logger); // принудительный вызов beginTransaction
         await selectPrepared(databaseName, session, [[2, 6, 1]], logger);
     });
     await driver.destroy();
