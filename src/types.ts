@@ -577,8 +577,8 @@ export class TypedData {
     }
 
     expandFields() {
-        // @ts-ignore   доступ к static свойству derived класса
-        const refMeta : YdbTableMetaData = this.constructor.refMetaData;
+        const refMeta : YdbTableMetaData = (this.constructor as typeof TypedData).refMetaData;
+        if (! refMeta ) return; // если описание таблицы идет старым способом
         Reflect.ownKeys(refMeta.tableDef).forEach(key => {
             key=key as string;
             if (! this[key]) {
