@@ -1,10 +1,9 @@
 import { config } from 'dotenv';
 config({ path: 'env.local' });
 
-import { ColorConsole } from './color-console';
+import { ColorConsole } from '../type-utils/color-console';
 
-import { Session } from '@ggvlasov/ydb-sdk';
-import { driver, initYDBdriver, describeTable, logger, databaseName } from './ydb-functions';
+import { driver, initYDBdriver, describeTable, logger } from '../type-utils/ydb-functions';
 import { fillTmdbWithData } from './fill_tmdb_with_data';
 import { createTables } from './create-table';
 import { TMDB_TABLE } from './data-helpers';
@@ -24,5 +23,3 @@ import { TMDB_TABLE } from './data-helpers';
 
     await driver.destroy();
 })();
-
-// const text = await run();

@@ -1,6 +1,6 @@
 import { TMDB_TABLE, Tmdb } from './data-helpers';
 import { Logger, Session, withRetries, Ydb } from '@ggvlasov/ydb-sdk';
-import { databaseName } from './ydb-functions';
+import { databaseName } from '../type-utils/ydb-functions';
 
 /*
 PRAGMA

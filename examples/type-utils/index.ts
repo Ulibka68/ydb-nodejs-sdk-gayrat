@@ -8,11 +8,10 @@ import {
     Session,
     TableDescription,
     withRetries,
-    Ydb
-} from 'ydb-sdk';
-import {getSeriesData, Series} from './data-helpers';
-import {main, SYNTAX_V1} from '../utils';
-
+    Ydb,
+} from '@ggvlasov/ydb-sdk';
+import { getSeriesData, Series } from './data-helpers';
+// import { main, SYNTAX_V1 } from '../utils';
 
 const SERIES_TABLE = 'series';
 
@@ -24,29 +23,36 @@ async function createTables(session: Session, logger: Logger) {
     await session.createTable(
         SERIES_TABLE,
         new TableDescription()
-            .withColumn(new Column(
-                'series_id',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UINT64}}})
-            ))
-            .withColumn(new Column(
-                'title',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UTF8}}})
-            ))
-            .withColumn(new Column(
-                'series_info',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UTF8}}})
-            ))
-            .withColumn(new Column(
-                'release_date',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.DATE}}})
-            ))
+            .withColumn(
+                new Column(
+                    'series_id',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UINT64 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'title',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UTF8 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'series_info',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UTF8 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'release_date',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.DATE } } })
+                )
+            )
             .withPrimaryKey('series_id')
     );
 }
 
 async function fillTablesWithData(tablePathPrefix: string, session: Session, logger: Logger) {
     const query = `
-${SYNTAX_V1}
 PRAGMA TablePathPrefix("${tablePathPrefix}");
 
 DECLARE $seriesData AS List<Struct<
@@ -68,7 +74,7 @@ FROM AS_TABLE($seriesData);
         const preparedQuery = await session.prepareQuery(query);
         logger.info('Query has been prepared, executing...');
         await session.executeQuery(preparedQuery, {
-            '$seriesData': getSeriesData()
+            $seriesData: getSeriesData(),
         });
     }
     await withRetries(fillTable);
@@ -76,7 +82,6 @@ FROM AS_TABLE($seriesData);
 
 async function selectSimple(tablePathPrefix: string, session: Session, logger: Logger): Promise<void> {
     const query = `
-${SYNTAX_V1}
 PRAGMA TablePathPrefix("${tablePathPrefix}");
 SELECT series_id,
        title,
@@ -85,8 +90,8 @@ SELECT series_id,
 FROM ${SERIES_TABLE}
 WHERE series_id = 1;`;
     logger.info('Making a simple select...');
-    const {resultSets} = await session.executeQuery(query);
-    console.log(JSON.stringify(resultSets, null, 2))
+    const { resultSets } = await session.executeQuery(query);
+    console.log(JSON.stringify(resultSets, null, 2));
     const result = Series.createNativeObjects(resultSets[0]);
     logger.info(`selectSimple result: ${JSON.stringify(result, null, 2)}`);
 }
@@ -96,7 +101,7 @@ async function run(logger: Logger, entryPoint: string, dbName: string) {
     logger.debug('Driver initializing...');
     const driver = new Driver(entryPoint, dbName, authService);
     const timeout = 10000;
-    if (!await driver.ready(timeout)) {
+    if (!(await driver.ready(timeout))) {
         logger.fatal(`Driver has not become ready in ${timeout}ms!`);
         process.exit(1);
     }

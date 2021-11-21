@@ -1,28 +1,45 @@
 {
-  "compilerOptions": {
-    "target": "es2017",
-    "module": "commonjs",
-    "outDir": "build",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "pretty": true,
+   "compilerOptions": {
+    //    https://www.staging-typescript.org/tsconfig#lib
+    "lib": ["es2021"], /* Specify library files to be included in the compilation. */
+
+    "module": "CommonJS",
+    "target": "es2021",
     "newLine": "lf",
-    "stripInternal": true,
-    "strict": true,
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noEmitOnError": true,
+    "stripInternal": true, // Disable emitting declarations that have `@internal` in their JSDoc comments.
+    "noFallthroughCasesInSwitch": true, // Enable error reporting for fallthrough cases in switch statements.
+
+    "strict": true,                                 /* Enable all strict type-checking options. */
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
+    "noEmit": false, // Do not emit compiler output files like JavaScript source code, source-maps or declarations
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": false, // нужно true для babel
+    "inlineSources": true,
+    "sourceMap": true,
+    "esModuleInterop": true,                        /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    "allowSyntheticDefaultImports": true,     /*allows you to write an import like:     import React from "react";     instead of:     import * as React from "react";*/
+    "skipLibCheck": true,                           /* Skip type checking of declaration files. */
+    "allowJs": false,                          /* Allow JavaScript files to be imported inside your project */
+    //    декораторы
+    //    emitDecoratorMetadata и experimentalDecorators
     "experimentalDecorators": true,
-    "allowJs": true
+    "emitDecoratorMetadata": true,
+
+//    "emitDeclarationOnly": true, // turns off compilation and declaration ensures the type definition files are generated.
+    "declaration": true, // Generate .d.ts files from TypeScript and JavaScript files in your project.
+
+  "outDir": "./dist/",
+//  "outFile": "ydb-bundle.js", // нельзя использовать для common js
   },
-  "include": [
-    "**/*.ts"
-  ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "baseUrl": "src/", // this must be specified if "paths" is specified.
+  "paths": { // A series of entries which re-map imports to lookup locations relative to the baseUrl,
+    "@/*": [
+      "src/*"
+    ]
+  }
 }

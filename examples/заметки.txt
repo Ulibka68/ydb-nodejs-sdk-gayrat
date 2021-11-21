@@ -1,0 +1,5 @@
+npm i
+
+
+set PATH=%PATH:F:\_prg\fork\ydb-nodejs-sdk\node_modules\.bin;=%
+set PATH=F:\_prg\fork\ydb-nodejs-sdk\examples\node_modules\.bin;%PATH%

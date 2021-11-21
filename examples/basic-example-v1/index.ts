@@ -1,18 +1,11 @@
+import { config } from 'dotenv';
+config({ path: 'env.local' });
+
 process.env.YDB_SDK_PRETTY_LOGS = '1';
 
-import {
-    Column,
-    Driver,
-    getCredentialsFromEnv,
-    Logger,
-    Session,
-    TableDescription,
-    withRetries,
-    Ydb
-} from 'ydb-sdk';
-import {Episode, getEpisodesData, getSeasonsData, getSeriesData, Series} from './data-helpers';
-import {main, SYNTAX_V1} from '../utils';
-
+import { Column, Logger, Session, TableDescription, withRetries, Ydb } from '@ggvlasov/ydb-sdk';
+import { Episode, getEpisodesData, getSeasonsData, getSeriesData, Series } from './data-helpers';
+import { driver, logger, databaseName, initYDBdriver, describeTable } from '../type-utils/ydb-functions';
 
 const SERIES_TABLE = 'series';
 const SEASONS_TABLE = 'seasons';
@@ -28,89 +21,108 @@ async function createTables(session: Session, logger: Logger) {
     await session.createTable(
         SERIES_TABLE,
         new TableDescription()
-            .withColumn(new Column(
-                'series_id',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UINT64}}})
-            ))
-            .withColumn(new Column(
-                'title',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UTF8}}})
-            ))
-            .withColumn(new Column(
-                'series_info',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UTF8}}})
-            ))
-            .withColumn(new Column(
-                'release_date',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.DATE}}})
-            ))
+            .withColumn(
+                new Column(
+                    'series_id',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UINT64 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'title',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UTF8 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'series_info',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UTF8 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'release_date',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.DATE } } })
+                )
+            )
             .withPrimaryKey('series_id')
     );
 
     await session.createTable(
         SEASONS_TABLE,
         new TableDescription()
-            .withColumn(new Column(
-                'series_id',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UINT64}}})
-            ))
-            .withColumn(new Column(
-                'season_id',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UINT64}}})
-            ))
-            .withColumn(new Column(
-                'title',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UTF8}}})
-            ))
-            .withColumn(new Column(
-                'first_aired',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.DATE}}})
-            ))
-            .withColumn(new Column(
-                'last_aired',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.DATE}}})
-            ))
+            .withColumn(
+                new Column(
+                    'series_id',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UINT64 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'season_id',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UINT64 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'title',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UTF8 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'first_aired',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.DATE } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'last_aired',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.DATE } } })
+                )
+            )
             .withPrimaryKeys('series_id', 'season_id')
     );
 
     await session.createTable(
         EPISODES_TABLE,
         new TableDescription()
-            .withColumn(new Column(
-                'series_id',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UINT64}}})
-            ))
-            .withColumn(new Column(
-                'season_id',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UINT64}}})
-            ))
-            .withColumn(new Column(
-                'episode_id',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UINT64}}})
-            ))
-            .withColumn(new Column(
-                'title',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.UTF8}}})
-            ))
-            .withColumn(new Column(
-                'air_date',
-                Ydb.Type.create({optionalType: {item: {typeId: Ydb.Type.PrimitiveTypeId.DATE}}})
-            ))
+            .withColumn(
+                new Column(
+                    'series_id',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UINT64 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'season_id',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UINT64 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'episode_id',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UINT64 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'title',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.UTF8 } } })
+                )
+            )
+            .withColumn(
+                new Column(
+                    'air_date',
+                    Ydb.Type.create({ optionalType: { item: { typeId: Ydb.Type.PrimitiveTypeId.DATE } } })
+                )
+            )
             .withPrimaryKeys('series_id', 'season_id', 'episode_id')
     );
 }
 
-async function describeTable(session: Session, tableName: string, logger: Logger) {
-    logger.info(`Describing table: ${tableName}`);
-    const result = await session.describeTable(tableName);
-    for (const column of result.columns) {
-        logger.info(`Column name '${column.name}' has type ${JSON.stringify(column.type)}`);
-    }
-}
-
 async function fillTablesWithData(tablePathPrefix: string, session: Session, logger: Logger) {
     const query = `
-${SYNTAX_V1}
 PRAGMA TablePathPrefix("${tablePathPrefix}");
 
 DECLARE $seriesData AS List<Struct<
@@ -161,9 +173,9 @@ FROM AS_TABLE($episodesData);`;
         const preparedQuery = await session.prepareQuery(query);
         logger.info('Query has been prepared, executing...');
         await session.executeQuery(preparedQuery, {
-            '$seriesData': getSeriesData(),
-            '$seasonsData': getSeasonsData(),
-            '$episodesData': getEpisodesData()
+            $seriesData: getSeriesData(),
+            $seasonsData: getSeasonsData(),
+            $episodesData: getEpisodesData(),
         });
     }
     await withRetries(fillTable);
@@ -171,7 +183,6 @@ FROM AS_TABLE($episodesData);`;
 
 async function selectSimple(tablePathPrefix: string, session: Session, logger: Logger): Promise<void> {
     const query = `
-${SYNTAX_V1}
 PRAGMA TablePathPrefix("${tablePathPrefix}");
 SELECT series_id,
        title,
@@ -179,27 +190,30 @@ SELECT series_id,
 FROM ${SERIES_TABLE}
 WHERE series_id = 1;`;
     logger.info('Making a simple select...');
-    const {resultSets} = await session.executeQuery(query);
+    const { resultSets } = await session.executeQuery(query);
     const result = Series.createNativeObjects(resultSets[0]);
     logger.info(`selectSimple result: ${JSON.stringify(result, null, 2)}`);
 }
 
 async function upsertSimple(tablePathPrefix: string, session: Session, logger: Logger): Promise<void> {
     const query = `
-${SYNTAX_V1}
 PRAGMA TablePathPrefix("${tablePathPrefix}");
 UPSERT INTO ${EPISODES_TABLE} (series_id, season_id, episode_id, title) VALUES
 (2, 6, 1, "TBD");`;
     logger.info('Making an upsert...');
     await session.executeQuery(query);
-    logger.info('Upsert completed.')
+    logger.info('Upsert completed.');
 }
 
 type ThreeIds = [number, number, number];
 
-async function selectPrepared(tablePathPrefix: string, session: Session, data: ThreeIds[], logger: Logger): Promise<void> {
+async function selectPrepared(
+    tablePathPrefix: string,
+    session: Session,
+    data: ThreeIds[],
+    logger: Logger
+): Promise<void> {
     const query = `
-    ${SYNTAX_V1}
     PRAGMA TablePathPrefix("${tablePathPrefix}");
 
     DECLARE $seriesId AS Uint64;
@@ -215,11 +229,11 @@ async function selectPrepared(tablePathPrefix: string, session: Session, data: T
         const preparedQuery = await session.prepareQuery(query);
         logger.info('Selecting prepared query...');
         for (const [seriesId, seasonId, episodeId] of data) {
-            const episode = new Episode({seriesId, seasonId, episodeId, title: '', airDate: new Date()});
-            const {resultSets} = await session.executeQuery(preparedQuery, {
-                '$seriesId': episode.getTypedValue('seriesId'),
-                '$seasonId': episode.getTypedValue('seasonId'),
-                '$episodeId': episode.getTypedValue('episodeId')
+            const episode = new Episode({ seriesId, seasonId, episodeId, title: '', airDate: new Date() });
+            const { resultSets } = await session.executeQuery(preparedQuery, {
+                $seriesId: episode.getTypedValue('seriesId'),
+                $seasonId: episode.getTypedValue('seasonId'),
+                $episodeId: episode.getTypedValue('episodeId'),
             });
             const result = Series.createNativeObjects(resultSets[0]);
             logger.info(`Select prepared query ${JSON.stringify(result, null, 2)}`);
@@ -230,7 +244,6 @@ async function selectPrepared(tablePathPrefix: string, session: Session, data: T
 
 async function explicitTcl(tablePathPrefix: string, session: Session, ids: ThreeIds, logger: Logger) {
     const query = `
-    ${SYNTAX_V1}
     PRAGMA TablePathPrefix("${tablePathPrefix}");
 
     DECLARE $seriesId AS Uint64;
@@ -243,47 +256,51 @@ async function explicitTcl(tablePathPrefix: string, session: Session, ids: Three
     async function update() {
         logger.info('Running prepared query with explicit transaction control...');
         const preparedQuery = await session.prepareQuery(query);
-        const txMeta = await session.beginTransaction({serializableReadWrite: {}});
+        const txMeta = await session.beginTransaction({ serializableReadWrite: {} });
         const [seriesId, seasonId, episodeId] = ids;
-        const episode = new Episode({seriesId, seasonId, episodeId, title: '', airDate: new Date()});
+        const episode = new Episode({ seriesId, seasonId, episodeId, title: '', airDate: new Date() });
         const params = {
-            '$seriesId': episode.getTypedValue('seriesId'),
-            '$seasonId': episode.getTypedValue('seasonId'),
-            '$episodeId': episode.getTypedValue('episodeId')
+            $seriesId: episode.getTypedValue('seriesId'),
+            $seasonId: episode.getTypedValue('seasonId'),
+            $episodeId: episode.getTypedValue('episodeId'),
         };
         const txId = txMeta.id as string;
         logger.info(`Executing query with txId ${txId}.`);
-        await session.executeQuery(preparedQuery, params, {txId});
-        await session.commitTransaction({txId});
+        await session.executeQuery(preparedQuery, params, { txId });
+        await session.commitTransaction({ txId });
         logger.info(`TxId ${txId} committed.`);
     }
     await withRetries(update);
 }
 
-async function run(logger: Logger, entryPoint: string, dbName: string) {
-    const authService = getCredentialsFromEnv(entryPoint, dbName, logger);
-    logger.debug('Driver initializing...');
-    const driver = new Driver(entryPoint, dbName, authService);
-    const timeout = 10000;
-    if (!await driver.ready(timeout)) {
-        logger.fatal(`Driver has not become ready in ${timeout}ms!`);
-        process.exit(1);
-    }
+async function run() {
+    await initYDBdriver();
     await driver.tableClient.withSession(async (session) => {
         await createTables(session, logger);
         await describeTable(session, 'series', logger);
-        await fillTablesWithData(dbName, session, logger);
+        await fillTablesWithData(databaseName, session, logger);
     });
+
     await driver.tableClient.withSession(async (session) => {
-        await selectSimple(dbName, session, logger);
-        await upsertSimple(dbName, session, logger);
+        await selectSimple(databaseName, session, logger);
+        await upsertSimple(databaseName, session, logger);
 
-        await selectPrepared(dbName, session, [[2, 3, 7], [2, 3, 8]], logger);
+        await selectPrepared(
+            databaseName,
+            session,
+            [
+                [2, 3, 7],
+                [2, 3, 8],
+            ],
+            logger
+        );
 
-        await explicitTcl(dbName, session, [2, 6, 1], logger);
-        await selectPrepared(dbName, session, [[2, 6, 1]], logger);
+        await explicitTcl(databaseName, session, [2, 6, 1], logger);
+        await selectPrepared(databaseName, session, [[2, 6, 1]], logger);
     });
     await driver.destroy();
 }
 
-main(run);
+(async function () {
+    await run();
+})();

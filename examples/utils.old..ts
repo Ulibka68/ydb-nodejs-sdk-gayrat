@@ -1,6 +1,5 @@
-import {getLogger, Logger, parseConnectionString} from 'ydb-sdk';
+import { getLogger, Logger, parseConnectionString } from '@ggvlasov/ydb-sdk';
 import yargs from 'yargs';
-
 
 export interface Runner {
     (logger: Logger, entryPoint: string, dbName: string, cliParams?: any): Promise<void>;
@@ -15,27 +14,30 @@ export interface Option {
 export async function main(runner: Runner, options?: Option[]) {
     const optionsUsage = options && options.length > 0 ? options.map((option) => ` --${option.name}`).join('') : '';
 
-    const argsBuilder = yargs
-        .usage(`Usage: $0 (--db <database> --endpoint <endpoint> or --connection-string <connection_string>)${optionsUsage}`);
+    const argsBuilder = yargs.usage(
+        `Usage: $0 (--db <database> --endpoint <endpoint> or --connection-string <connection_string>)${optionsUsage}`
+    );
 
     argsBuilder.options({
-       'db': { describe: 'YDB database name', type: 'string'},
-       'endpoint': {describe: 'YDB database endpoint', type: 'string'},
-       'connection-string': {describe: 'YDB connection string', type: 'string'},
+        db: { describe: 'YDB database name', type: 'string' },
+        endpoint: { describe: 'YDB database endpoint', type: 'string' },
+        'connection-string': { describe: 'YDB connection string', type: 'string' },
     });
 
     options?.forEach((option) => {
-       argsBuilder.option(option.name, {
-           describe: option.description,
-           type: 'string',
-           demandOption: true,
-       });
+        argsBuilder.option(option.name, {
+            describe: option.description,
+            type: 'string',
+            demandOption: true,
+        });
     });
 
     const args = argsBuilder.argv;
 
-    const endpointParam = args.endpoint as string;
-    const dbParam = args.db as string;
+    // const endpointParam = args.endpoint as string;
+    const endpointParam = process.env.DOCUMENT_API_ENDPOINT;
+    // const dbParam = args.db as string;
+    const dbParam = process.env.DATABASENAME;
     const connectionStringParam = args.connectionString as string;
 
     let endpoint;
@@ -48,7 +50,9 @@ export async function main(runner: Runner, options?: Option[]) {
         endpoint = endpointParam;
         db = dbParam;
     } else {
-        throw new Error('Either --connection-string <connection_string> or --db <database> --endpoint <endpoint> arguments are required');
+        throw new Error(
+            'Either --connection-string <connection_string> or --db <database> --endpoint <endpoint> arguments are required'
+        );
     }
 
     const cliParams = {} as any;
@@ -62,8 +66,6 @@ export async function main(runner: Runner, options?: Option[]) {
     try {
         await runner(logger, endpoint, db, cliParams);
     } catch (error) {
-        logger.error(error);
+        logger.error(error as Error);
     }
 }
-
-export const SYNTAX_V1 = '--!syntax_v1';
