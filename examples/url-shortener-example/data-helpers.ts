@@ -1,19 +1,21 @@
-import {Ydb, declareType, TypedData} from 'ydb-sdk';
+// noinspection ES6ConvertRequireIntoImport
 
-const SOURCE_URL_REGEX = new RegExp("https?://(?:[-\\w.]|(?:%[\\da-fA-F]{2}))+");
-const SHORTEN_REGEX = new RegExp("[a-zA-Z0-9]");
+import { Ydb, declareType, TypedData } from '@ggvlasov/ydb-sdk';
 
-let crc = require('crc');
+const SOURCE_URL_REGEX = new RegExp('https?://(?:[-\\w.]|(?:%[\\da-fA-F]{2}))+');
+const SHORTEN_REGEX = new RegExp('[a-zA-Z0-9]');
+
+import crc from 'crc';
 
 interface IUrlsMatch {
-    shorten: string,
-    source: string
+    shorten: string;
+    source: string;
 }
 export class UrlsMatch extends TypedData {
-    @declareType({typeId: Ydb.Type.PrimitiveTypeId.UTF8})
+    @declareType({ typeId: Ydb.Type.PrimitiveTypeId.UTF8 })
     public shorten: string;
 
-    @declareType({typeId: Ydb.Type.PrimitiveTypeId.UTF8})
+    @declareType({ typeId: Ydb.Type.PrimitiveTypeId.UTF8 })
     public source: string;
 
     static isSourceUrlCorrect(sourceUrl: string): boolean {
@@ -31,12 +33,11 @@ export class UrlsMatch extends TypedData {
     }
 }
 
-
 interface IRequestSourceUrl {
-    shorten: string
+    shorten: string;
 }
 export class RequestSourceUrl extends TypedData {
-    @declareType({typeId: Ydb.Type.PrimitiveTypeId.UTF8})
+    @declareType({ typeId: Ydb.Type.PrimitiveTypeId.UTF8 })
     public shorten: string;
 
     static isShortenCorrect(shorten: string): boolean {

@@ -7,14 +7,19 @@
     "basic-v1": "ts-node basic-example-v1/index.ts",
     "scan-query": "ts-node scan-query/index.ts",
     "scheme-client": "ts-node scheme-client/index.ts",
+    "url-shortener-example": "ts-node url-shortener-example/index.ts",
     "lint": "eslint basic-example-simplified/src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
     "@ggvlasov/ydb-sdk": "1.0.4",
+    "crc": "^3.8.0",
     "dotenv": "^10.0.0",
+    "express": "^4.17.1",
     "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
+    "@types/crc": "^3.4.0",
+    "@types/express": "^4.17.13",
     "@types/node": "^16.11.9",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
