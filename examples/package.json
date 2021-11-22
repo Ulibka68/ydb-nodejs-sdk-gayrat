@@ -6,6 +6,7 @@
     "basic-simplified": "ts-node basic-example-simplified/index.ts",
     "basic-v1": "ts-node basic-example-v1/index.ts",
     "scan-query": "ts-node scan-query/index.ts",
+    "scheme-client": "ts-node scheme-client/index.ts",
     "lint": "eslint basic-example-simplified/src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
