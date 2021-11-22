@@ -98,7 +98,7 @@ async function executeScanQueryWithParams(tablePathPrefix: string, session: Sess
 
         DECLARE $value AS Utf8;
 
-        SELECT key
+        SELECT *
         FROM ${TABLE}
         WHERE value = $value;`;
 
@@ -123,19 +123,18 @@ async function executeScanQueryWithParams(tablePathPrefix: string, session: Sess
 async function run() {
     await initYDBdriver();
 
-    /* await driver.tableClient.withSession(async (session) => {
+    await driver.tableClient.withSession(async (session) => {
         await createTable(session, logger);
         await fillTableWithData(databaseName, session, logger);
-    });*/
-
-    await driver.tableClient.withSession(async (session) => {
-        await describeTable(session, TABLE, logger);
     });
-    process.exit(555);
 
     await driver.tableClient.withSession(async (session) => {
         await executeScanQueryWithParams(databaseName, session, logger);
     });
+    await driver.tableClient.withSession(async (session) => {
+        await describeTable(session, TABLE, logger);
+    });
+
     await driver.destroy();
 }
 

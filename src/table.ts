@@ -214,6 +214,35 @@ export class Session extends EventEmitter implements ICreateSessionResult {
 
     @retryable()
     @pessimizable
+    /**
+     * tablePath - название таблицы
+     * возвращает количество записей в таблице из статистики таблицы (может быть не точное значение)
+     * Сейчас на практике формат возвращаемого значения Long
+     * В настоящий момент возвращается только 32 бита - это максимум 4 294 967 295 записей (4 миллиарда) - если у Вас больше записей, то надо использовать Long
+     * При возврате low я принудительно перевел его в unsigned >>> 0
+     */
+    public async getTableStatsRowsCount(tablePath: string): Promise<number> {
+        const request: Ydb.Table.IDescribeTableRequest = {
+            sessionId: this.sessionId,
+            path: `${this.endpoint.database}/${tablePath}`,
+            includeTableStats:true
+        };
+        const response = await this.api.describeTable(request);
+        const payload = getOperationPayload(response);
+        const result = DescribeTableResult.decode(payload);
+
+        let rows = 0;
+        if (result.tableStats) {
+            if (typeof result.tableStats.rowsEstimate === 'object') {
+                rows = result.tableStats.rowsEstimate!.low >>> 0;
+            } else rows = result.tableStats.rowsEstimate!;
+        }
+
+        return rows;
+    }
+
+    @retryable()
+    @pessimizable
     public async beginTransaction(txSettings: ITransactionSettings, operationParams?: IOperationParams): Promise<ITransactionMeta> {
         const response = await this.api.beginTransaction({
             sessionId: this.sessionId,

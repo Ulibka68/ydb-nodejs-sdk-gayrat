@@ -35,5 +35,20 @@ export async function describeTable(session: Session, tableName: string, logger:
             `  Column '${column.name}' type ${primitiveTypeIdToName[column.type!.optionalType!.item!.typeId!]}`
         );
     }
+
     console.log(ColorConsole.Reset);
+    console.log(
+        '  storeSize : "',
+        new Intl.NumberFormat().format((result?.tableStats?.storeSize as Long).low),
+        '" байт'
+    );
+    console.log('  partitions : ', (result?.tableStats?.partitions as Long).low);
+    console.log('  rowsEstimate : ', (result?.tableStats?.rowsEstimate as Long).low);
+    // console.log('  modificationTime nanos : ', result?.tableStats?.modificationTime?.nanos);
+    // console.log('  modificationTime seconds : ', (result?.tableStats?.modificationTime?.seconds as Long).low);
+    console.log(
+        '  modificationTime : ',
+        new Date((result?.tableStats?.modificationTime?.seconds as Long).low * 1000),
+        '\n'
+    );
 }

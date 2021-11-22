@@ -9,7 +9,7 @@
     "lint": "eslint basic-example-simplified/src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
-    "@ggvlasov/ydb-sdk": "^1.0.2",
+    "@ggvlasov/ydb-sdk": "1.0.4",
     "dotenv": "^10.0.0",
     "reflect-metadata": "^0.1.13"
   },
