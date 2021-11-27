@@ -5,6 +5,7 @@
   "scripts": {
     "basic-simplified": "ts-node basic-example-simplified/index.ts",
     "basic-v1": "ts-node basic-example-v1/index.ts",
+    "basic-example-new-way": "ts-node basic-example-new-way/index.ts",
     "scan-query": "ts-node scan-query/index.ts",
     "scheme-client": "ts-node scheme-client/index.ts",
     "url-shortener-example": "ts-node url-shortener-example/index.ts",

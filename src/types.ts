@@ -760,10 +760,6 @@ export class TypedData {
     static async upsertSeriesToDB(session: Session, logger: Logger, dataArray : Array<TypedData> ) {
 
         const YQLUpsert =  this.refMetaData.YQLUpsertSeries;
-       /* const YQLUpsert =`PRAGMA TablePathPrefix("${databaseName}");
-        Declare $seriesData  as List<Struct<id: Uint64, title : Utf8?, adult : BOOL?>>;
-        UPSERT INTO ${this.refMetaData.tableName} SELECT  * FROM AS_TABLE($seriesData);`*/
-
 
         async function fillTable() {
             logger.info('Inserting data to tables, preparing query...');
