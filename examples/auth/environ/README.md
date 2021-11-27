@@ -1,21 +1,39 @@
-# Authenticate with environ
+# Авторизация с использованием авторизованного ключа сервисного аккаунта
+Данный метод использован практически для всех имеющихся здесь примеров (за исключением auth).
 
-`environ` example provides the code snippet for authenticating to YDB with the access token credentials.
+Предлагаемый метод отличается от авторизации по IAM токену тем, что авторизованный ключ сервисного аккаунта не имеет конечного срока действия в отличие от IAM токена, срок действия которого составляет 12 часов.
 
-Authentication is performed with one of next environment variables:
+# Краткое описание
+1. Сформируйте файл с ключами и поместите ключи в файл service_account_key_file.json
+2. Создайте файл env.local в корне проекта и запишите туда необходимые переменные
+3. Инициализируйте драйвер как сделано в настоящем примере
 
-* YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS=<path/to/sa_key_file> — used service account key file by path
-* YDB_ANONYMOUS_CREDENTIALS="1" — used for authenticate with anonymous access. Anonymous access needs for connect to testing YDB installation
-* YDB_METADATA_CREDENTIALS="1" — used metadata service for authenticate to YDB from Yandex Cloud virtual machine or from Yandex Function
-* YDB_ACCESS_TOKEN_CREDENTIALS=<access_token> — used for authenticate to YDB with short-life access token. For example, access token may be IAM token
+# Формирование ключа для доступа к YDB
+В корневой директории необходимо сформировать ключ для доступа к базе.
+Ключ будет сформирован в файле service_account_key_file.json
 
-## Running code snippet
-```bash
-YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS=/Users/user/.ydb/sa.json node environ --connection-string "grpcs://endpoint/?database=database"
-# or
-YDB_ANONYMOUS_CREDENTIALS="1" node environ --connection-string "grpcs://endpoint/?database=database"
-# or
-YDB_METADATA_CREDENTIALS="1" node environ --connection-string "grpcs://endpoint/?database=database"
-# or
-YDB_ACCESS_TOKEN_CREDENTIALS="YDB_ACCESS_TOKEN" node environ --connection-string "grpcs://endpoint/?database=database"
+Запустите команду: (если Вы под windows - то лучше запускать из wsl - в противном случае Вам необходимо убрать слеши из команды)
 ```
+yc iam key create \
+--folder-id <идентификатор каталога> \
+--service-account-name <имя сервисного аккаунта> \
+--output service_account_key_file.json
+```
+
+### yc
+Про установку и настройку yc прочитайте тут:
+
+https://cloud.yandex.ru/docs/cli/quickstart
+
+## Создание конфигурационного файла
+Создайте файл env.local в корневой директории.
+Скопируйте туда строку:
+YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS=service_account_key_file.json
+(готовый пример файла уже приведен в данном проекте, в данном файле секреты отсутствуют)
+
+В файл env.local необходимо поместить значения переменных:
+
+DOCUMENT_API_ENDPOINT
+DATABASENAME
+
+Указанные значения необходимо скопировать из web-интерфейса YDB из свойств базы данных.

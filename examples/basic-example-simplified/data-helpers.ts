@@ -1,6 +1,4 @@
-// import 'reflect-metadata';
 import { declareTypePrim, declareTypeNull, TypedData, Ydb, ITableFromClass } from '@ggvlasov/ydb-sdk';
-import { databaseName } from '../type-utils/ydb-functions';
 
 const TypePrim = Ydb.Type.PrimitiveTypeId;
 export const TMDB_TABLE = 'tmdb'; // имя таблицы

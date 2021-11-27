@@ -10,6 +10,7 @@
     "url-shortener-example": "ts-node url-shortener-example/index.ts",
     "access-token-credentials": "ts-node auth/access-token-credentials/index.ts",
     "anonymous-credentials": "ts-node auth/anonymous-credentials/index.ts",
+    "auth-environ": "ts-node auth/environ/index.ts",
     "lint": "eslint basic-example-simplified/src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
