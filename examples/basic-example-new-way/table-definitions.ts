@@ -22,19 +22,19 @@ export class Series extends TypedData {
 }
 
 const episode = {
+    seriesId: { val: 0, pt: Pt.UINT64, opt: 'r', pk: true },
+    seasonId: { val: 0, pt: Pt.UINT64, opt: 'r', pk: true },
     episodeId: { val: 0, pt: Pt.UINT64, opt: 'r', pk: true },
-    seriesId: { val: 0, pt: Pt.UINT64, opt: 0 },
-    seasonId: { val: 0, pt: Pt.UINT64, opt: 0 },
-    title: { val: 'title', pt: Pt.UTF8, opt: 0 },
     airDate: { val: new Date(), pt: Pt.DATE, opt: 0 },
+    title: { val: 'title', pt: Pt.UTF8, opt: 0 },
 };
 
-export type IEpisode = ConvertStructToTypes<typeof episode>;
+export type IEpisodes = ConvertStructToTypes<typeof episode>;
 
-export class Episode extends TypedData {
+export class Episodes extends TypedData {
     public static refMetaData: YdbTableMetaData;
 
-    constructor(data: IEpisode) {
+    constructor(data: IEpisodes) {
         super(data);
     }
 }
@@ -43,6 +43,7 @@ const season = {
     seasonId: { val: 0, pt: Pt.UINT64, opt: 'r', pk: true },
     seriesId: { val: 0, pt: Pt.UINT64, opt: 0 },
     title: { val: 'title', pt: Pt.UTF8, opt: 0 },
+    title1: { val: 'title1', pt: Pt.UTF8, opt: 0 },
     firstAired: { val: new Date(), pt: Pt.DATE, opt: 0 },
     lastAired: { val: new Date(), pt: Pt.DATE, opt: 0 },
 };
@@ -59,5 +60,5 @@ export class Season extends TypedData {
 
 // инициализация класса таблицы
 Series.initTableDef(Series, 'series', databaseName, series);
-Episode.initTableDef(Episode, 'episode', databaseName, episode);
+Episodes.initTableDef(Episodes, 'episodes', databaseName, episode);
 Season.initTableDef(Season, 'season', databaseName, season);

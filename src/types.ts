@@ -474,6 +474,7 @@ export type TableDefinition = Record<string, FieldsDefinition>;
 export class YdbTableMetaData {
         public tableName: string='';
         public fieldsDescriptions: Array<TypedDataFieldDescription>=[];
+        public fieldsDescriptions2: Array<TypedDataFieldDescription>=[];
         public   YQLUpsert:string='';
         public   YQLUpsertSeries:string='';
         public   YQLCreateTable:string='';
@@ -592,12 +593,6 @@ export class TypedData {
         // @ts-ignore   доступ к static свойству derived класса
         const refMeta : YdbTableMetaData = this.constructor.refMetaData;
 
-        /*
-        // выдаст все параметры
-        refMeta.fieldsDescriptions.forEach((fld)=>{
-            resObj['$'+fld.name]=this.getTypedValue(fld.name)
-        })*/
-
         Reflect.ownKeys(this).forEach(key   => {
             key=key.toString();
             resObj['$'+key]=this.getTypedValue(key)
@@ -607,6 +602,24 @@ export class TypedData {
         return resObj;
     }
 
+    static generateFieldsDescription() {
+        const refMeta : YdbTableMetaData=this.refMetaData;
+        const tdef=refMeta.tableDef;
+        const converter = getNameConverter(this.__options, 'jsToYdb');
+
+        Reflect.ownKeys(tdef).forEach(key=>{
+            const keys:string=key as string;
+            const fld : TypedDataFieldDescription={
+                name:converter(keys),
+                typeId: tdef[keys].pt,
+                optional:tdef[keys].opt === 0,
+                typeName:primitiveTypeIdToName[tdef[keys].pt],
+                primaryKey:tdef[keys].pk
+            };
+            refMeta.fieldsDescriptions2.push(fld);
+        })
+    } // generateFieldsDescription
+
     generateYQLUpsert( databaseName: string) {
         let rst = `PRAGMA TablePathPrefix("${databaseName}");`;
         let rst_series = `PRAGMA TablePathPrefix("${databaseName}");\nDECLARE $seriesData AS List<Struct<`;
@@ -614,7 +627,7 @@ export class TypedData {
         const refMeta : YdbTableMetaData=(this.constructor as typeof TypedData).refMetaData;
 
         const tpo = this.getRowType().structType.members.map((itm) => {
-            const res = { name: itm.name, typeId: 0, optional: false, typeName: '' };
+            const res = { name: itm.name, typeId: 0, optional: false, typeName: '',primaryKey :false };
             if (itm.type.typeId) {
                 res.typeId = itm.type.typeId;
             } else {
@@ -655,6 +668,8 @@ export class TypedData {
 
         refMeta.YQLUpsert=rst;
         refMeta.YQLUpsertSeries=rst_series;
+
+
     } // generateYQLUpsert
 
     static generateInitialData(tableDef: TableDefinition) {
@@ -694,28 +709,28 @@ export class TypedData {
         let first_primary = true;
 
         rst += `CREATE TABLE ${this.refMetaData.tableName} (`;
-        Reflect.ownKeys(this.refMetaData.tableDef).forEach((key) => {
-            key = key as string;
-            rst += `\n    ${key} ${primitiveTypeIdToName[this.refMetaData.tableDef[key].pt]},`;
-            if (this.refMetaData.tableDef[key].pk) {
+        this.refMetaData.fieldsDescriptions.forEach((fld) => {
+
+            rst += `\n    ${fld.name} ${primitiveTypeIdToName[fld.typeId]},`;
+            if (fld.primaryKey) {
                 if (!first_primary) {
                     rst_primary += ',';
                 }
                 first_primary = false;
-                rst_primary += key;
+                rst_primary += fld.name;
             }
         });
         rst_primary += ')';
         rst += rst_primary + '\n)';
-        // return rst;
         this.refMetaData.YQLCreateTable = rst;
     } // generateYQLcreateTable
 
     static setPrimaryKeyField() {
+        const converter = getNameConverter(this.__options, 'jsToYdb');
         Reflect.ownKeys(this.refMetaData.tableDef).forEach((key) => {
             key = key as string;
             if (this.refMetaData.tableDef[key].pk) {
-                const idx= this.refMetaData.fieldsDescriptions.findIndex( (element)=> (element.name === key));
+                const idx= this.refMetaData.fieldsDescriptions.findIndex( (element)=> (element.name === converter(key as string)));
                 if (idx >=0) this.refMetaData.fieldsDescriptions[idx].primaryKey=true;
             }
         });
@@ -727,9 +742,10 @@ export class TypedData {
         this.refMetaData.tableDef = tdef;
 
         const rec = new ctor(TypedData.generateInitialData(tdef ));
+        this.generateFieldsDescription();
         rec.generateYQLUpsert(databaseName);
-        this.generateYQLcreateTable(databaseName);
         this.setPrimaryKeyField();
+        this.generateYQLcreateTable(databaseName);
     }
 
     async upsertToDB(session: Session, logger: Logger ) {
@@ -796,19 +812,12 @@ export class TypedData {
 
     static async createDBTable(session: Session, logger: Logger )  {
         logger.info('Creating table... ' + this.refMetaData.tableName);
+
         const columns : Array<Column>=[];
         const primaryKeys : Array<string>=[];
         this.refMetaData.fieldsDescriptions.forEach(fld=>{
             const type ={optionalType: {item: {typeId: fld.typeId}}};
-            /*
-
-            // Error : Only optional type for columns supported
-            if (fld.optional) {
-                type={optionalType: {item: {typeId: fld.typeId}}};
-            } else {
-                type= {typeId: fld.typeId};
-            }
-             */
+            // Only optional type for columns supported
 
             const column = new Column(
                 fld.name,
