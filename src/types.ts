@@ -474,7 +474,6 @@ export type TableDefinition = Record<string, FieldsDefinition>;
 export class YdbTableMetaData {
         public tableName: string='';
         public fieldsDescriptions: Array<TypedDataFieldDescription>=[];
-        public fieldsDescriptions2: Array<TypedDataFieldDescription>=[];
         public   YQLUpsert:string='';
         public   YQLUpsertSeries:string='';
         public   YQLCreateTable:string='';
@@ -616,51 +615,36 @@ export class TypedData {
                 typeName:primitiveTypeIdToName[tdef[keys].pt],
                 primaryKey:tdef[keys].pk
             };
-            refMeta.fieldsDescriptions2.push(fld);
+            refMeta.fieldsDescriptions.push(fld);
         })
     } // generateFieldsDescription
 
-    generateYQLUpsert( databaseName: string) {
+    static generateYQLUpsert( databaseName: string) {
         let rst = `PRAGMA TablePathPrefix("${databaseName}");`;
         let rst_series = `PRAGMA TablePathPrefix("${databaseName}");\nDECLARE $seriesData AS List<Struct<`;
 
-        const refMeta : YdbTableMetaData=(this.constructor as typeof TypedData).refMetaData;
+        const refMeta : YdbTableMetaData=this.refMetaData;
 
-        const tpo = this.getRowType().structType.members.map((itm) => {
-            const res = { name: itm.name, typeId: 0, optional: false, typeName: '',primaryKey :false };
-            if (itm.type.typeId) {
-                res.typeId = itm.type.typeId;
-            } else {
-                res.typeId = itm.type!.optionalType!.item!.typeId as number;
-                res.optional = true;
-            }
-
-            res.typeName = primitiveTypeIdToName[res.typeId];
-            return res;
-        });
-        refMeta.fieldsDescriptions=tpo;
-
-        tpo.forEach((itm) => {
-            rst += `\nDECLARE $${itm.name} as ${itm.typeName}${
-                itm.optional ? '?' : ''
+        refMeta.fieldsDescriptions.forEach((fld) => {
+            rst += `\nDECLARE $${fld.name} as ${fld.typeName}${
+                fld.optional ? '?' : ''
             };`;
-            rst_series += `\n   ${itm.name} : ${itm.typeName}${itm.optional ? '?' : ''},`;
+            rst_series += `\n   ${fld.name} : ${fld.typeName}${fld.optional ? '?' : ''},`;
         });
         rst_series = rst_series.substring(0,rst_series.length-1);
         rst_series += `>>;\n\nUPSERT INTO ${refMeta.tableName}\nSELECT *`;
 
         rst += `\n\nUPSERT INTO ${refMeta.tableName} (`;
-        tpo.forEach((itm) => {
+
+        refMeta.fieldsDescriptions.forEach((itm) => {
             rst += `\n   ${itm.name},`;
-            // rst_series += `\n   ${itm.name},`;
         });
 
         rst = rst.substring(0, rst.length - 1);
-        // rst_series = rst_series.substring(0,rst_series.length-1);
         rst_series += '\nFROM AS_TABLE($seriesData);'
 
         rst += '\n)VALUES (';
-        tpo.forEach((itm) => {
+        refMeta.fieldsDescriptions.forEach((itm) => {
             rst += `\n   $${itm.name},`;
         });
         rst = rst.substring(0, rst.length - 1);
@@ -725,7 +709,7 @@ export class TypedData {
         this.refMetaData.YQLCreateTable = rst;
     } // generateYQLcreateTable
 
-    static setPrimaryKeyField() {
+   /* static setPrimaryKeyField() {
         const converter = getNameConverter(this.__options, 'jsToYdb');
         Reflect.ownKeys(this.refMetaData.tableDef).forEach((key) => {
             key = key as string;
@@ -734,17 +718,17 @@ export class TypedData {
                 if (idx >=0) this.refMetaData.fieldsDescriptions[idx].primaryKey=true;
             }
         });
-    }
+    }*/
 
-    static initTableDef(ctor : {new (data: any):any},tableName: string,databaseName : string, tdef : TableDefinition) {
+    static initTableDef(databaseName : string,tableName: string, tdef : TableDefinition) {
         this.refMetaData = new YdbTableMetaData();
         this.refMetaData.tableName = tableName;
         this.refMetaData.tableDef = tdef;
 
-        const rec = new ctor(TypedData.generateInitialData(tdef ));
         this.generateFieldsDescription();
-        rec.generateYQLUpsert(databaseName);
-        this.setPrimaryKeyField();
+        // const rec = new ctor(TypedData.generateInitialData(tdef ));
+        this.generateYQLUpsert(databaseName);
+        // this.setPrimaryKeyField();
         this.generateYQLcreateTable(databaseName);
     }
 
