@@ -709,26 +709,13 @@ export class TypedData {
         this.refMetaData.YQLCreateTable = rst;
     } // generateYQLcreateTable
 
-   /* static setPrimaryKeyField() {
-        const converter = getNameConverter(this.__options, 'jsToYdb');
-        Reflect.ownKeys(this.refMetaData.tableDef).forEach((key) => {
-            key = key as string;
-            if (this.refMetaData.tableDef[key].pk) {
-                const idx= this.refMetaData.fieldsDescriptions.findIndex( (element)=> (element.name === converter(key as string)));
-                if (idx >=0) this.refMetaData.fieldsDescriptions[idx].primaryKey=true;
-            }
-        });
-    }*/
-
     static initTableDef(databaseName : string,tableName: string, tdef : TableDefinition) {
         this.refMetaData = new YdbTableMetaData();
         this.refMetaData.tableName = tableName;
         this.refMetaData.tableDef = tdef;
 
         this.generateFieldsDescription();
-        // const rec = new ctor(TypedData.generateInitialData(tdef ));
         this.generateYQLUpsert(databaseName);
-        // this.setPrimaryKeyField();
         this.generateYQLcreateTable(databaseName);
     }
 

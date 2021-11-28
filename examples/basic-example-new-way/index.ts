@@ -6,12 +6,17 @@ import { getSeriesData, getSeasonsData, getEpisodesData } from './table-data';
     await initYDBdriver(); // если не удалось инициализация - то внутри идет process.exit
 
     await driver.tableClient.withSession(async (session) => {
-        // await Series.upsertSeriesToDB(session, logger, getSeriesData());
-        // await Season.upsertSeriesToDB(session, logger, getSeasonsData());
+        await Series.dropDBTable(session, logger);
+        await Series.createDBTable(session, logger);
+        await Series.upsertSeriesToDB(session, logger, getSeriesData());
 
-        // await Episodes.dropDBTable(session, logger);
+        await Season.dropDBTable(session, logger);
+        await Season.createDBTable(session, logger);
+        await Season.upsertSeriesToDB(session, logger, getSeasonsData());
+
+        await Episodes.dropDBTable(session, logger);
         await Episodes.createDBTable(session, logger);
-        // await Episode.upsertSeriesToDB(session, logger, getEpisodesData());
+        await Episodes.upsertSeriesToDB(session, logger, getEpisodesData());
     });
 
     await driver.destroy();

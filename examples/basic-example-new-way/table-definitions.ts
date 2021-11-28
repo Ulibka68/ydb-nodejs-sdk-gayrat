@@ -40,10 +40,9 @@ export class Episodes extends TypedData {
 }
 
 const season = {
-    seasonId: { val: 0, pt: Pt.UINT64, opt: 'r', pk: true },
     seriesId: { val: 0, pt: Pt.UINT64, opt: 0 },
+    seasonId: { val: 0, pt: Pt.UINT64, opt: 'r', pk: true },
     title: { val: 'title', pt: Pt.UTF8, opt: 0 },
-    title1: { val: 'title1', pt: Pt.UTF8, opt: 0 },
     firstAired: { val: new Date(), pt: Pt.DATE, opt: 0 },
     lastAired: { val: new Date(), pt: Pt.DATE, opt: 0 },
 };
@@ -59,6 +58,6 @@ export class Season extends TypedData {
 }
 
 // инициализация класса таблицы
-Series.initTableDef(Series, 'series', databaseName, series);
-Episodes.initTableDef(Episodes, 'episodes', databaseName, episode);
-Season.initTableDef(Season, 'season', databaseName, season);
+Series.initTableDef(databaseName, 'series', series);
+Episodes.initTableDef(databaseName, 'episodes', episode);
+Season.initTableDef(databaseName, 'season', season);
