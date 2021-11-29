@@ -1,6 +1,6 @@
 {
   "name": "@ggvlasov/ydb-sdk",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Node.js bindings for working with YDB API over gRPC",
   "main": "build/index.js",
   "files": [
