@@ -15,7 +15,7 @@
     "lint": "eslint basic-example-simplified/src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
-    "@ggvlasov/ydb-sdk": "1.0.5",
+    "@ggvlasov/ydb-sdk": "1.0.6",
     "crc": "^3.8.0",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",

@@ -83,7 +83,26 @@ export function getSeasonsData() {
             seasonId: 5,
             title: 'Season 5',
             firstAired: new Date('2018-03-25'),
-            // lastAired: new Date('2018-05-13'),
+            lastAired: new Date('2018-05-13'),
+        }),
+    ];
+}
+
+export function getSeasonsData2() {
+    return [
+        new Season({
+            seasonId: 30,
+            seriesId: 1,
+            title: 'Season 30 bulk upsert',
+            firstAired: new Date('2006-02-03'),
+            lastAired: new Date('2006-03-03'),
+        }),
+        new Season({
+            seasonId: 31,
+            seriesId: 1,
+            title: 'Season 31 bulk upsert',
+            firstAired: new Date('2006-02-03'),
+            lastAired: new Date('2006-03-03'),
         }),
     ];
 }
