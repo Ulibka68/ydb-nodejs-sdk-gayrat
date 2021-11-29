@@ -3,6 +3,8 @@
 
 Не используйте его на productions.
 
+Смотри **README-YDB.md**
+
 # How to use
 ## Install dependencies and compile library
 ```bash
