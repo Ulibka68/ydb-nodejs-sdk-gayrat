@@ -1,3 +1,8 @@
+# Сейчас это экспериментальный пакет.
+Он предназначен для подготовки pull request.
+
+Не используйте его на productions.
+
 # How to use
 ## Install dependencies and compile library
 ```bash
