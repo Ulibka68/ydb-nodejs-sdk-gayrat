@@ -7,7 +7,7 @@ type ITMdb = ITableFromClass<Tmdb>;
 
 export class Tmdb extends TypedData {
     @declareTypePrim(TypePrim.UINT64)
-    // @ts-ignore
+    // @ts-ignore  - требуется потому что не инициализировано обязательное поле id
     public id: number;
 
     @declareTypeNull(TypePrim.UTF8)

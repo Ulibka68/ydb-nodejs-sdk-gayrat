@@ -4,4 +4,4 @@
 
 Сформируйте файл service_account_key_file.json c секретными ключами
 
-Запустите npm run ts-node
+Запустите npm run basic-simplified

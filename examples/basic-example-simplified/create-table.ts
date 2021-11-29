@@ -1,4 +1,4 @@
-import { Session, Logger, TableDescription, Column, Ydb, declareTypePrim, declareTypeNull } from '@ggvlasov/ydb-sdk';
+import { Session, Logger, TableDescription, Column, Ydb } from '@ggvlasov/ydb-sdk';
 import { TMDB_TABLE } from './data-helpers';
 
 export async function createTables(session: Session, logger: Logger) {
