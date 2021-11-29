@@ -59,6 +59,10 @@ export const primitiveTypeToValue: Record<number, string> = {
     [Type.PrimitiveTypeId.TZ_TIMESTAMP]: 'textValue',
 };
 
+export const errorText : Record<number, string> ={
+    1 : 'Please provide tabledefinition in refMetaData'
+}
+
 type primitive = boolean | string | number | Date;
 
 export class Primitive {
@@ -475,7 +479,7 @@ export class YdbTableMetaData {
         public tableName: string='';
         public fieldsDescriptions: Array<TypedDataFieldDescription>=[];
         public   YQLUpsert:string='';
-        public   YQLUpsertSeries:string='';
+        public   YQLReplaceSeries:string='';
         public   YQLCreateTable:string='';
         public tableDef: TableDefinition={};
 }
@@ -578,11 +582,11 @@ export class TypedData {
 
     expandFields() {
         const refMeta : YdbTableMetaData = (this.constructor as typeof TypedData).refMetaData;
-        if (! refMeta ) return; // если описание таблицы идет старым способом
+        if (! refMeta ) throw new Error(errorText[1]); // если описание таблицы идет старым способом
+
         Reflect.ownKeys(refMeta.tableDef).forEach(key => {
-            key=key as string;
-            if (! this[key]) {
-                this[key]=null;
+            if (! this[key as string]) {
+                this[key as string]=null;
             }
         })
     }
@@ -632,7 +636,7 @@ export class TypedData {
             rst_series += `\n   ${fld.name} : ${fld.typeName}${fld.optional ? '?' : ''},`;
         });
         rst_series = rst_series.substring(0,rst_series.length-1);
-        rst_series += `>>;\n\nUPSERT INTO ${refMeta.tableName}\nSELECT *`;
+        rst_series += `>>;\n\nREPLACE INTO ${refMeta.tableName}\nSELECT *`;
 
         rst += `\n\nUPSERT INTO ${refMeta.tableName} (`;
 
@@ -651,7 +655,7 @@ export class TypedData {
         rst += '\n);';
 
         refMeta.YQLUpsert=rst;
-        refMeta.YQLUpsertSeries=rst_series;
+        refMeta.YQLReplaceSeries=rst_series;
 
 
     } // generateYQLUpsert
@@ -719,52 +723,71 @@ export class TypedData {
         this.generateYQLcreateTable(databaseName);
     }
 
-    async upsertToDB(session: Session, logger: Logger ) {
+    async upsertToDB(session: Session, logger: Logger )  : Promise<{result: boolean, message: string}> {
 
-        const YQLUpsert =  (this.constructor as typeof TypedData).refMetaData.YQLUpsert;
+        const refMeta =  (this.constructor as typeof TypedData).refMetaData;
+        if (! refMeta) throw new Error(errorText[1]);
+
+        const YQLUpsert =  refMeta.YQLUpsert;
         const thisRecord =this;
 
         async function fillTable() {
             logger.info('Inserting data to tables, preparing query...');
-            // @ts-ignore
+
             let preparedQuery: Ydb.Table.PrepareQueryResult;
             try {
                 preparedQuery = await session.prepareQuery( YQLUpsert );
                 logger.info('Query has been prepared, executing...');
                 await session.executeQuery(preparedQuery, thisRecord.createQueryParams());
+                return {result : true,message:'OK'};
             } catch (err) {
+                let msg = '';
                 if (err instanceof Error) {
                     console.error(err.message);
-                    process.exit(55);
-                }
+                    msg = err.message;
+                } else msg = 'unknown Error';
+                return {result : false,message:msg}
             }
 
         }
 
-        await withRetries(fillTable);
+        return await withRetries(fillTable);
     }
 
-    static async upsertSeriesToDB(session: Session, logger: Logger, dataArray : Array<TypedData> ) {
 
-        const YQLUpsert =  this.refMetaData.YQLUpsertSeries;
+    /*
+      upsert нескольких значений реализовать не удалось - потому что если передавать неполные данные (только часть полей)
+      то YDB для серии все равно требует ввода всех полей
+     */
+    static async replaceSeriesToDB(session: Session, logger: Logger, dataArray : Array<TypedData> ) : Promise<{result: boolean, message: string}> {
+        if (! this.refMetaData ) throw new Error(errorText[1]); // если описание таблицы идет старым способом
+
+        const YQLReplace =  this.refMetaData.YQLReplaceSeries;
+
+        // должен быть передан полный набор полей
+        dataArray.forEach(data=>{
+            data.expandFields();
+        })
 
         async function fillTable() {
             logger.info('Inserting data to tables, preparing query...');
             try {
-                const preparedQuery = await session.prepareQuery( YQLUpsert );
+                const preparedQuery = await session.prepareQuery( YQLReplace );
                 logger.info('Query has been prepared, executing...');
                 await session.executeQuery(preparedQuery,{'$seriesData': TypedData.asTypedCollection(dataArray)})
-                    // thisRecord.createQueryParams());
+                return {result : true,message:'OK'};
             } catch (err) {
+                let msg = '';
                 if (err instanceof Error) {
                     console.error(err.message);
-                    process.exit(55);
-                }
+                    msg = err.message;
+                } else msg = 'unknown Error';
+                return {result : false,message:msg}
             }
 
         }
 
-        await withRetries(fillTable);
+       return await withRetries(fillTable);
     }
 
     /*

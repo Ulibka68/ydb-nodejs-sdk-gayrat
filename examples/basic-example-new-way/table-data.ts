@@ -83,7 +83,7 @@ export function getSeasonsData() {
             seasonId: 5,
             title: 'Season 5',
             firstAired: new Date('2018-03-25'),
-            lastAired: new Date('2018-05-13'),
+            // lastAired: new Date('2018-05-13'),
         }),
     ];
 }
